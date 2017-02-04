@@ -176,9 +176,9 @@ func message(session *discordgo.Session, e *discordgo.Message){
 			timeuser, ok := timezones[user.ID];
 			var reply string;
 			
-			timezone := timeuser.TimeZone;
-
 			if(ok){
+				timezone := timeuser.TimeZone;
+
 				loc, err := parseTimeZone(timezone);
 				if(err != nil){
 					printErr("Invalid map entry", err);
