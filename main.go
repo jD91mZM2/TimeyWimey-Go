@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"strings"
 	"time"
+	"strconv"
 )
 
 const PREFIX = "#";
@@ -266,6 +267,27 @@ func message(session *discordgo.Session, e *discordgo.Message){
 func parseTimeZone(timezone string) (*time.Location, error){
 	loc, ok := cache[timezone];
 	if(!ok){
+		fixedPos := strings.Split(timezone, "+");
+		fixedNeg := strings.Split(timezone, "-");
+
+		if(len(fixedPos) > 1){
+			zone := fixedPos[0];
+			value, err := strconv.Atoi(fixedPos[1]);
+			
+			if(err == nil){
+				loc = time.FixedZone(zone, value * 60 * 60);
+				return loc, nil;
+			}
+		} else if(len(fixedNeg) > 1){
+			zone := fixedNeg[0];
+			value, err := strconv.Atoi(fixedNeg[1]);
+
+			if(err == nil){
+				loc = time.FixedZone(zone, -(value * 60 * 60));
+				return loc, nil;
+			}
+		}
+
 		var err error;
 		loc, err = time.LoadLocation(timezone);
 		if(err != nil){
