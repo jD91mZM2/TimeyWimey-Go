@@ -8,7 +8,9 @@ and<br />
 
 First you need to set your timezone<br />
 do that using **for example**<br />
-`#timezone europe/stockholm`
+`#timezone europe/stockholm`<br />
+or<br />
+`#timezone europe/stockholm 24h`<br />
 
 ## Have fun!
 
