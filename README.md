@@ -11,3 +11,7 @@ do that using **for example**<br />
 `#timezone europe/stockholm`
 
 ## Have fun!
+
+
+# Dependencies
+[DiscordGo](https://github.com/bwmarrin/discordgo/)
