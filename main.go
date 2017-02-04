@@ -14,6 +14,27 @@ const PREFIX = "#";
 const BOTID = "277346768222420992";
 const FORMAT = "03:04 PM";
 const FORMAT24 = "15:04";
+const HELP = `
+**Welcome to TimeyWimey!**
+This is the bot that manages your timezones... for you.
+
+Specify your timezone:
+` + "```#timezone <timezone> [24h]```" + `
+Get time of user:
+` + "```#timefor @user1 @user2 et.c```" + `
+Get time of user at specific time (BETA):
+` + "```#timeat <time> @users```" + `
+Examples:
+` + "```#timezone europe/stockholm```" + `
+Saved timezone "Europe/Stockholm" for LEGOlord208. Current time is 06:66 AM
+` + "```#timefor```" + `
+Current time for LEGOlord208 is 06:66 AM.
+` + "```#timefor @test @LEGOlord208```" + `
+Current time for test is 07:66 AM.
+Current time for LEGOlord208 is 06:66 AM.
+` + "```#timeat 7PM @LEGOlord208```" + `
+7PM your time is 08:00 PM for test.
+`
 
 type User struct{
 	TimeZone string
@@ -231,6 +252,14 @@ func message(session *discordgo.Session, e *discordgo.Message){
 			sendMessage(session, e.ChannelID, timeat + " your time is " +
 				currentTime + " for " + user.Username + ".");
 		}
+	} else if(cmd == "help"){
+		dm, err := session.UserChannelCreate(e.Author.ID);
+		if(err != nil){
+			printErr("Could not open DMs", err);
+			return;
+		}
+		sendMessage(session, dm.ID, HELP);
+		sendMessage(session, e.ChannelID, "Delivered in DMs!");
 	}
 }
 
