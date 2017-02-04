@@ -8,6 +8,6 @@ and<br />
 
 First you need to set your timezone<br />
 do that using **for example**<br />
-`#timezone europe/sweden`
+`#timezone europe/stockholm`
 
 ## Have fun!
