@@ -14,6 +14,7 @@ or<br />
 
 ## Have fun!
 
+`#help`:
 ![Imgur](http://i.imgur.com/yBGQjKk.png)
 
 # Dependencies
