@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"strconv"
+	"regexp"
 )
 
 const PREFIX = "#";
@@ -44,6 +45,9 @@ type User struct{
 
 var timezones map[string]*User;
 var cache = make(map[string]*time.Location);
+
+var rSpace = regexp.MustCompile("\\s+");
+var rMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*");
 
 func main(){
 	args := os.Args[1:];
@@ -108,15 +112,29 @@ func message(session *discordgo.Session, e *discordgo.Message){
 		return;
 	}
 	msg = msg[1:];
-
-	parts := strings.Split(msg, " ");
+	msg = rMentions.ReplaceAllString(msg, "");
+	
+	parts := rSpace.Split(msg, -1);
 	cmd := parts[0];
 	args := parts[1:];
 
 	if(cmd == "timezone"){
 		if(len(args) < 1){
-			sendMessage(session, e.ChannelID, "Usage: " + PREFIX +
-				"timezone <timezone>");
+			var reply string;
+			if(len(e.Mentions) > 0){
+				for _, user := range e.Mentions{
+					timeuser, ok := timezones[user.ID];
+					if(ok){
+						reply = user.Username + "'s timezone is " +
+							timeuser.TimeZone + ".";
+					} else {
+						reply = user.Username + "'s timezone is not set.";
+					}
+				}
+			} else {
+				reply = "Usage: " + PREFIX + "timezone <timezone>";
+			}
+			sendMessage(session, e.ChannelID, reply);
 			return;
 		}
 		is24h := len(args) >= 2 && args[1] == "24h";
@@ -134,10 +152,14 @@ func message(session *discordgo.Session, e *discordgo.Message){
 		}
 		timezone := strings.Join(parts, "/");
 
-		loc, err := parseTimeZone(timezone);
+		fixed, loc, err := parseTimeZone(timezone);
 		if(err != nil){
 			sendMessage(session, e.ChannelID, "Could not load timezone.");
 			return;
+		}
+
+		if(fixed){
+			timezone = strings.ToUpper(timezone);
 		}
 
 		timezones[e.Author.ID] = &User{TimeZone: timezone, Is24h: is24h};
@@ -180,7 +202,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 			if(ok){
 				timezone := timeuser.TimeZone;
 
-				loc, err := parseTimeZone(timezone);
+				_, loc, err := parseTimeZone(timezone);
 				if(err != nil){
 					printErr("Invalid map entry", err);
 					return;
@@ -202,7 +224,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 			return;
 		}
 
-		loc, err := parseTimeZone(timeuser.TimeZone);
+		_, loc, err := parseTimeZone(timeuser.TimeZone);
 		if(err != nil){
 			printErr("Invalid map entry", err);
 			return;
@@ -243,7 +265,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 				return;
 			}
 
-			loc2, err := parseTimeZone(timeuser2.TimeZone);
+			_, loc2, err := parseTimeZone(timeuser2.TimeZone);
 			if(err != nil){
 				printErr("Invalid map entry", err);
 				return;
@@ -264,7 +286,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 	}
 }
 
-func parseTimeZone(timezone string) (*time.Location, error){
+func parseTimeZone(timezone string) (bool, *time.Location, error){
 	loc, ok := cache[timezone];
 	if(!ok){
 		fixedPos := strings.Split(timezone, "+");
@@ -276,7 +298,7 @@ func parseTimeZone(timezone string) (*time.Location, error){
 			
 			if(err == nil){
 				loc = time.FixedZone(zone, value * 60 * 60);
-				return loc, nil;
+				return true, loc, nil;
 			}
 		} else if(len(fixedNeg) > 1){
 			zone := fixedNeg[0];
@@ -284,18 +306,18 @@ func parseTimeZone(timezone string) (*time.Location, error){
 
 			if(err == nil){
 				loc = time.FixedZone(zone, -(value * 60 * 60));
-				return loc, nil;
+				return true, loc, nil;
 			}
 		}
 
 		var err error;
 		loc, err = time.LoadLocation(timezone);
 		if(err != nil){
-			return nil, err;
+			return false, nil, err;
 		}
 		cache[timezone] = loc;
 	}
-	return loc, nil;
+	return false, loc, nil;
 }
 
 func saveTimeZones() error{
