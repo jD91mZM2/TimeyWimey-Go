@@ -14,6 +14,7 @@ or<br />
 
 ## Have fun!
 
+![Imgur](http://i.imgur.com/yBGQjKk.png)
 
 # Dependencies
 [DiscordGo](https://github.com/bwmarrin/discordgo/)
