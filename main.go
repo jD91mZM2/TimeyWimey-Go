@@ -176,7 +176,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 		currentTime := time.Now().In(loc).Format(format);
 		sendMessage(session, e.ChannelID, "Saved timezone \"" + timezone +
 			"\" for " + e.Author.Username + ". Current time is " +
-			currentTime);
+			currentTime + ".");
 		return;
 	} else if(cmd == "timefor"){
 		timeuser, ok := timezones[e.Author.ID];
