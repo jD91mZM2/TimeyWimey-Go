@@ -246,6 +246,9 @@ func message(session *discordgo.Session, e *discordgo.Message){
 				return;
 			}
 		}
+		now := time.Now().In(loc);
+		t = time.Date(now.Year(), now.Month(), now.Day(), t.Hour(),
+			t.Minute(), t.Second(), t.Nanosecond(), loc);
 
 		format := FORMAT;
 		if(timeuser.Is24h){
