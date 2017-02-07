@@ -1,6 +1,10 @@
 # TimeyWimey
 No more stuggle with time zones... Thanks Discord!
 
+## Getting it!
+If you are just the general user, just invite it [here](https://discordapp.com/oauth2/authorize?client_id=277346768222420992&scope=bot)
+
+## About
 TimeyWimey allows you to ask stuff like<br />
 `#timefor @user`<br />
 and<br />
