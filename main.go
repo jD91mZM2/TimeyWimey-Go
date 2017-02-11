@@ -14,7 +14,7 @@ import (
 )
 
 const PREFIX = "#";
-const BOTID = "277346768222420992";
+var BOTID string;
 const FORMAT = "03:04 PM";
 const FORMAT24 = "15:04";
 const HELP = `
@@ -80,6 +80,13 @@ func main(){
 		stdutil.PrintErr("Could not create Discord session", err);
 		return;
 	}
+
+	user, err := session.User("@me");
+	if(err != nil){
+		stdutil.PrintErr("Could not query user", err);
+		return;
+	}
+	BOTID = user.ID;
 
 	session.AddHandler(messageCreate);
 	session.AddHandler(messageUpdate);
