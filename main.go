@@ -10,6 +10,7 @@ import (
 	"time"
 	"strconv"
 	"regexp"
+	"github.com/legolord208/stdutil"
 )
 
 const PREFIX = "#";
@@ -67,7 +68,7 @@ func main(){
 	} else {
 		err = json.Unmarshal(data, &timezones);
 		if(err != nil){
-			printErr("Could not load JSON", err);
+			stdutil.PrintErr("Could not load JSON", err);
 			return;
 		}
 	}
@@ -76,7 +77,7 @@ func main(){
 
 	session, err := discordgo.New("Bot " + token);
 	if(err != nil){
-		printErr("Could not create Discord session", err);
+		stdutil.PrintErr("Could not create Discord session", err);
 		return;
 	}
 
@@ -85,7 +86,7 @@ func main(){
 
 	err = session.Open();
 	if(err != nil){
-		printErr("Could not start Discord session", err);
+		stdutil.PrintErr("Could not start Discord session", err);
 		return;
 	}
 
@@ -204,7 +205,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 
 				_, loc, err := parseTimeZone(timezone);
 				if(err != nil){
-					printErr("Invalid map entry", err);
+					stdutil.PrintErr("Invalid map entry", err);
 					return;
 				}
 				currentTime := time.Now().In(loc).Format(format);
@@ -226,7 +227,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 
 		_, loc, err := parseTimeZone(timeuser.TimeZone);
 		if(err != nil){
-			printErr("Invalid map entry", err);
+			stdutil.PrintErr("Invalid map entry", err);
 			return;
 		}
 
@@ -270,7 +271,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 
 			_, loc2, err := parseTimeZone(timeuser2.TimeZone);
 			if(err != nil){
-				printErr("Invalid map entry", err);
+				stdutil.PrintErr("Invalid map entry", err);
 				return;
 			}
 
@@ -281,7 +282,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 	} else if(cmd == "help"){
 		dm, err := session.UserChannelCreate(e.Author.ID);
 		if(err != nil){
-			printErr("Could not open DMs", err);
+			stdutil.PrintErr("Could not open DMs", err);
 			return;
 		}
 		sendMessage(session, dm.ID, HELP);
@@ -326,13 +327,13 @@ func parseTimeZone(timezone string) (bool, *time.Location, error){
 func saveTimeZones() error{
 	data, err := json.Marshal(timezones);
 	if(err != nil){
-		printErr("Could not make JSON", err);
+		stdutil.PrintErr("Could not make JSON", err);
 		return err;
 	}
 
 	err = ioutil.WriteFile("timeywimey.json", data, 0666);
 	if(err != nil){
-		printErr("Couldn't save file", err);
+		stdutil.PrintErr("Couldn't save file", err);
 		return err;
 	}
 	return nil;
@@ -341,11 +342,7 @@ func saveTimeZones() error{
 func sendMessage(session *discordgo.Session, channelID, content string){
 	_, err := session.ChannelMessageSend(channelID, content);
 	if(err != nil){
-		printErr("Couldn't send message", err);
+		stdutil.PrintErr("Couldn't send message", err);
 		return;
 	}
-}
-
-func printErr(prefix string, err error){
-	fmt.Fprintln(os.Stderr, prefix + ":", err);
 }
