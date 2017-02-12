@@ -25,7 +25,7 @@ Specify your timezone:
 ` + "```#timezone <timezone> [24h]```" + `
 Get time of user:
 ` + "```#timefor @user1 @user2 et.c```" + `
-Get time of user at specific time (BETA):
+Get time of user at specific time:
 ` + "```#timeat <time> @users```" + `
 Examples:
 ` + "```#timezone europe/stockholm```" + `
