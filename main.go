@@ -47,7 +47,6 @@ type User struct{
 var timezones map[string]*User;
 var cache = make(map[string]*time.Location);
 
-var rSpace = regexp.MustCompile("\\s+");
 var rMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*");
 
 func main(){
@@ -122,7 +121,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 	msg = msg[1:];
 	msg = rMentions.ReplaceAllString(msg, "");
 	
-	parts := rSpace.Split(msg, -1);
+	parts := strings.Fields(msg);
 	cmd := parts[0];
 	args := parts[1:];
 
