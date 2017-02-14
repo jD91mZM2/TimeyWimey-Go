@@ -22,20 +22,20 @@ const HELP = `
 This is the bot that manages your timezones... for you.
 
 Specify your timezone:
-` + "```#timezone <timezone> [24h]```" + `
+` + "`#timezone <timezone> [24h]`" + `
 Get time of user:
-` + "```#timefor @user1 @user2 et.c```" + `
+` + "`#timefor @user1 @user2 et.c`" + `
 Get time of user at specific time:
-` + "```#timeat <time> @users```" + `
+` + "`#timeat <time> @users`" + `
 Examples:
-` + "```#timezone europe/stockholm```" + `
+` + "`#timezone europe/stockholm`" + `
 Saved timezone "Europe/Stockholm" for LEGOlord208. Current time is 06:66 AM
-` + "```#timefor```" + `
+` + "`#timefor`" + `
 Current time for LEGOlord208 is 06:66 AM.
-` + "```#timefor @test @LEGOlord208```" + `
+` + "`#timefor @test @LEGOlord208`" + `
 Current time for test is 07:66 AM.
 Current time for LEGOlord208 is 06:66 AM.
-` + "```#timeat 7PM @LEGOlord208```" + `
+` + "`#timeat 7PM @LEGOlord208`" + `
 7PM your time is 08:00 PM for test.
 `
 
@@ -291,7 +291,16 @@ func message(session *discordgo.Session, e *discordgo.Message){
 			stdutil.PrintErr("Could not open DMs", err);
 			return;
 		}
-		sendMessage(session, dm.ID, HELP);
+		_, err = session.ChannelMessageSendEmbed(dm.ID,
+			&discordgo.MessageEmbed{
+				Color: 33453,
+				Title: "TimeyWimey - Help menu",
+				Description: HELP,
+			});
+		if(err != nil){
+			stdutil.PrintErr("Could not send embed", nil);
+			return;
+		}
 		sendMessage(session, e.ChannelID, "Delivered in DMs!");
 	}
 }
