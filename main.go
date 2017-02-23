@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"regexp"
 	"github.com/legolord208/stdutil"
+	"os/signal"
 )
 
 const PREFIX = "#";
@@ -98,7 +99,12 @@ func main(){
 
 	fmt.Println("Started!");
 
-	<-make(chan interface{});
+	interrupt := make(chan os.Signal);
+	signal.Notify(interrupt, os.Interrupt);
+
+	<-interrupt;
+	fmt.Println("\nExiting");
+	session.Close();
 }
 
 func messageCreate(session *discordgo.Session, e *discordgo.MessageCreate){
