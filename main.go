@@ -52,7 +52,7 @@ var rMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*");
 
 func main(){
 	args := os.Args[1:];
-	
+
 	if(len(args) < 1){
 		fmt.Println("No token supplied in arguments.");
 		return;
@@ -99,7 +99,7 @@ func main(){
 
 	fmt.Println("Started!");
 
-	interrupt := make(chan os.Signal);
+	interrupt := make(chan os.Signal, 1);
 	signal.Notify(interrupt, os.Interrupt);
 
 	<-interrupt;
@@ -126,7 +126,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 	}
 	msg = msg[1:];
 	msg = rMentions.ReplaceAllString(msg, "");
-	
+
 	parts := strings.Fields(msg);
 	cmd := parts[0];
 	args := parts[1:];
@@ -155,11 +155,11 @@ func message(session *discordgo.Session, e *discordgo.Message){
 
 		for i, part := range parts{
 			parts2 := strings.Split(part, "_");
-			
+
 			for i2, part2 := range parts2{
 				parts2[i2] = strings.Title(part2);
 			}
-			
+
 			part = strings.Join(parts2, "_");
 			parts[i] = strings.Title(part);
 		}
@@ -180,7 +180,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 		if(err != nil){
 			return;
 		}
-		
+
 		format := FORMAT;
 		if(is24h){
 			format = FORMAT24;
@@ -211,7 +211,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 
 			timeuser, ok := timezones[user.ID];
 			var reply string;
-			
+
 			if(ok){
 				timezone := timeuser.TimeZone;
 
@@ -273,7 +273,7 @@ func message(session *discordgo.Session, e *discordgo.Message){
 				sendMessage(session, e.ChannelID, "Nice try.");
 				return;
 			}
-			
+
 			timeuser2, ok := timezones[user.ID];
 			if(!ok){
 				sendMessage(session, e.ChannelID, user.Username + "'s " +
@@ -320,7 +320,7 @@ func parseTimeZone(timezone string) (bool, *time.Location, error){
 		if(len(fixedPos) > 1){
 			zone := fixedPos[0];
 			value, err := strconv.Atoi(fixedPos[1]);
-			
+
 			if(err == nil){
 				loc = time.FixedZone(zone, value * 60 * 60);
 				return true, loc, nil;
