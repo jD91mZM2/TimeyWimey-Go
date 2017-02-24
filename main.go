@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"github.com/legolord208/stdutil"
 	"os/signal"
+	"syscall"
 )
 
 const PREFIX = "#";
@@ -99,8 +100,8 @@ func main(){
 
 	fmt.Println("Started!");
 
-	interrupt := make(chan os.Signal, 1);
-	signal.Notify(interrupt, os.Interrupt);
+	interrupt := make(chan os.Signal, 2);
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM);
 
 	<-interrupt;
 	fmt.Println("\nExiting");
