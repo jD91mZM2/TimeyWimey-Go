@@ -46,13 +46,17 @@ type User struct{
 	Is24h bool `json:",omitempty"`
 }
 
-var timezones map[string]*User;
+var timezones = make(map[string]*User);
 var cache = make(map[string]*time.Location);
 
 var rMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*");
 
 func main(){
 	args := os.Args[1:];
+
+	stdutil.EventPrePrintError = append(stdutil.EventPrePrintError, func(full string, msg string, err error) bool{
+		return err != nil && isPermission(err);
+	});
 
 	if(len(args) < 1){
 		fmt.Println("No token supplied in arguments.");
@@ -64,8 +68,10 @@ func main(){
 
 	data, err := ioutil.ReadFile("timeywimey.json");
 	if(err != nil){
-		fmt.Println("Note: Using empty timeywimey.json");
-		timezones = make(map[string]*User);
+		if(!os.IsNotExist(err)){
+			stdutil.PrintErr("Couldn't read file", err);
+			return;
+		}
 	} else {
 		err = json.Unmarshal(data, &timezones);
 		if(err != nil){
@@ -132,7 +138,26 @@ func message(session *discordgo.Session, e *discordgo.Message){
 	cmd := parts[0];
 	args := parts[1:];
 
-	if(cmd == "timezone"){
+	if(cmd == "ping"){
+		now := time.Now();
+
+		timestamp := e.EditedTimestamp;
+		if(timestamp == ""){
+			timestamp = e.Timestamp;
+		}
+
+		t, err := timestamp.Parse();
+		if(err != nil){
+			stdutil.PrintErr("Couldn't parse timestamp", err);
+			return;
+		}
+
+		diff := now.Sub(t);
+		diff_ms := diff.Nanoseconds() / time.Millisecond.Nanoseconds();
+		diff_str := strconv.Itoa(int(diff_ms));
+
+		sendMessage(session, e.ChannelID, "Pong! " + diff_str + "ms");
+	} else if(cmd == "timezone"){
 		if(len(args) < 1){
 			var reply string;
 			if(len(e.Mentions) > 0){
@@ -367,4 +392,7 @@ func sendMessage(session *discordgo.Session, channelID, content string){
 		stdutil.PrintErr("Couldn't send message", err);
 		return;
 	}
+}
+func isPermission(err error) bool{
+	return strings.Contains(err.Error(), "Missing Permission");
 }
