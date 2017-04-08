@@ -145,7 +145,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 	args := parts[1:]
 
 	if cmd == "ping" {
-		now := time.Now()
+		now := time.Now().UTC()
 
 		timestamp := e.EditedTimestamp
 		if timestamp == "" {
