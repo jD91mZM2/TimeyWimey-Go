@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	"github.com/legolord208/stdutil"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -13,45 +11,56 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/legolord208/stdutil"
 )
 
-const PREFIX = "#"
+var botID string
+var avatarURL string
 
-var BOTID string
-
-const FORMAT = "03:04 PM"
-const FORMAT24 = "15:04"
-const HELP = `
+const format = "03:04 PM"
+const format24 = "15:04"
+const help = `
 **Welcome to TimeyWimey!**
 This is the bot that manages your timezones... for you.
 
 Specify your timezone:
-` + "`#timezone <timezone> [24h]`" + `
+` + "`@TimeyWimey timezone <timezone> [24h]`" + `
 Get time of user:
-` + "`#timefor @user1 @user2 et.c`" + `
+` + "`@TimeyWimey timefor @user1 @user2 et.c`" + `
 Get time of user at specific time:
-` + "`#timeat <time> @users`" + `
+` + "`@TimeyWimey timeat <time> @users`" + `
 Examples:
-` + "`#timezone europe/stockholm`" + `
+` + "`@TimeyWimey timezone europe/stockholm`" + `
 Saved timezone "Europe/Stockholm" for LEGOlord208. Current time is 06:66 AM
-` + "`#timefor`" + `
+` + "`@TimeyWimey timefor`" + `
 Current time for LEGOlord208 is 06:66 AM.
-` + "`#timefor @test @LEGOlord208`" + `
+` + "`@TimeyWimey timefor @test @LEGOlord208`" + `
 Current time for test is 07:66 AM.
 Current time for LEGOlord208 is 06:66 AM.
-` + "`#timeat 7PM @LEGOlord208`" + `
+` + "`@TimeyWimey timeat 7PM @LEGOlord208`" + `
 7PM your time is 08:00 PM for test.
 `
+const about = `
+Hello! I'm TimeyWimey.
+I take care of the timezone trouble.
 
-type User struct {
+Do ` + "`@TimeyWimey help`" + ` for some help.
+
+I'm written in Go. Using, well, discordgo.
+Ok, have fun! Bai bai!
+`
+
+type user struct {
 	TimeZone string
 	Is24h    bool `json:",omitempty"`
 }
 
-var timezones = make(map[string]*User)
+var timezones = make(map[string]*user)
 var cache = make(map[string]*time.Location)
 
-var rMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*")
+var regexMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*")
 
 func main() {
 	args := os.Args[1:]
@@ -95,7 +104,8 @@ func main() {
 		stdutil.PrintErr("Could not query user", err)
 		return
 	}
-	BOTID = user.ID
+	botID = user.ID
+	avatarURL = discordgo.EndpointUserAvatar(user.ID, user.Avatar)
 
 	session.AddHandler(messageCreate)
 	session.AddHandler(messageUpdate)
@@ -108,7 +118,7 @@ func main() {
 
 	fmt.Println("Started!")
 
-	interrupt := make(chan os.Signal, 2)
+	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	<-interrupt
@@ -123,9 +133,6 @@ func messageUpdate(session *discordgo.Session, e *discordgo.MessageUpdate) {
 	message(session, e.Message)
 }
 func message(session *discordgo.Session, e *discordgo.Message) {
-	if e.Author == nil {
-		return
-	}
 	if e.Author.Bot {
 		return
 	}
@@ -134,11 +141,20 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 	if msg == "" {
 		return
 	}
-	if !strings.HasPrefix(msg, PREFIX) {
+
+	index := -1
+	for i, mention := range e.Mentions {
+		if mention.ID == botID {
+			index = i
+		}
+	}
+	if index < 0 {
 		return
 	}
-	msg = msg[1:]
-	msg = rMentions.ReplaceAllString(msg, "")
+	e.Mentions = append(e.Mentions[:index], e.Mentions[index+1:]...)
+
+	msg = regexMentions.ReplaceAllString(msg, "")
+	msg = strings.TrimSpace(msg)
 
 	parts := strings.Fields(msg)
 	cmd := parts[0]
@@ -159,10 +175,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		diff := now.Sub(t)
-		diff_ms := diff.Nanoseconds() / time.Millisecond.Nanoseconds()
-		diff_str := strconv.Itoa(int(diff_ms))
-
-		sendMessage(session, e.ChannelID, "Pong! "+diff_str+"ms")
+		sendMessage(session, e.ChannelID, "Pong! "+diff.String()+" difference from timestamp.")
 	} else if cmd == "timezone" {
 		if len(args) < 1 {
 			var reply string
@@ -177,7 +190,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					}
 				}
 			} else {
-				reply = "Usage: " + PREFIX + "timezone <timezone>"
+				reply = "Usage: timezone <timezone>"
 			}
 			sendMessage(session, e.ChannelID, reply)
 			return
@@ -207,15 +220,15 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			timezone = strings.ToUpper(timezone)
 		}
 
-		timezones[e.Author.ID] = &User{TimeZone: timezone, Is24h: is24h}
+		timezones[e.Author.ID] = &user{TimeZone: timezone, Is24h: is24h}
 		err = saveTimeZones()
 		if err != nil {
 			return
 		}
 
-		format := FORMAT
+		format := format
 		if is24h {
-			format = FORMAT24
+			format = format24
 		}
 
 		currentTime := time.Now().In(loc).Format(format)
@@ -226,9 +239,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 	} else if cmd == "timefor" {
 		timeuser, ok := timezones[e.Author.ID]
 
-		format := FORMAT
+		format := format
 		if ok && timeuser.Is24h {
-			format = FORMAT24
+			format = format24
 		}
 
 		mentions := e.Mentions
@@ -236,8 +249,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			mentions = []*discordgo.User{e.Author}
 		}
 		for _, user := range mentions {
-			if user.ID == BOTID {
-				sendMessage(session, e.ChannelID, "Nice try.")
+			if nicetry(session, e.ChannelID, user) {
 				return
 			}
 
@@ -276,8 +288,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		if len(args) < 1 {
-			sendMessage(session, e.ChannelID, PREFIX+
-				"timeat <time> <users>")
+			sendMessage(session, e.ChannelID, "timeat <time> <users>")
 			return
 		}
 
@@ -286,8 +297,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		if err != nil {
 			t, err = time.ParseInLocation("15", timeat, loc)
 			if err != nil {
-				sendMessage(session, e.ChannelID, "Wrong format. Example: "+
-					PREFIX+"timat 8PM @user")
+				sendMessage(session, e.ChannelID, "Wrong format. Example: timat 8PM @user")
 				return
 			}
 		}
@@ -295,14 +305,13 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		t = time.Date(now.Year(), now.Month(), now.Day(), t.Hour(),
 			t.Minute(), t.Second(), t.Nanosecond(), loc)
 
-		format := FORMAT
+		format := format
 		if timeuser.Is24h {
-			format = FORMAT24
+			format = format24
 		}
 
 		for _, user := range e.Mentions {
-			if user.ID == BOTID {
-				sendMessage(session, e.ChannelID, "Nice try.")
+			if nicetry(session, e.ChannelID, user) {
 				return
 			}
 
@@ -331,15 +340,35 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 		_, err = session.ChannelMessageSendEmbed(dm.ID,
 			&discordgo.MessageEmbed{
-				Color:       33453,
-				Title:       "TimeyWimey - Help menu",
-				Description: HELP,
-			})
+				Color:       0x82AD,
+				Title:       "TimeyWimey - Help!!!",
+				Description: help,
+			},
+		)
 		if err != nil {
 			stdutil.PrintErr("Could not send embed", nil)
 			return
 		}
 		sendMessage(session, e.ChannelID, "Delivered in DMs!")
+	} else if cmd == "about" {
+		_, err := session.ChannelMessageSendEmbed(e.ChannelID,
+			&discordgo.MessageEmbed{
+				Author: &discordgo.MessageEmbedAuthor{
+					Name:    "TimeyWimey",
+					IconURL: avatarURL,
+					URL:     discordgo.EndpointInvite(botID),
+				},
+				Color: 0x82AD,
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: "Sincerely ~TimeyWimey",
+				},
+				Description: about,
+			},
+		)
+		if err != nil {
+			stdutil.PrintErr("Could not send embed", nil)
+			return
+		}
 	}
 }
 
@@ -401,4 +430,12 @@ func sendMessage(session *discordgo.Session, channelID, content string) {
 }
 func isPermission(err error) bool {
 	return strings.Contains(err.Error(), "Missing Permission")
+}
+
+func nicetry(session *discordgo.Session, channel string, user *discordgo.User) bool {
+	if user.Bot {
+		sendMessage(session, channel, "Nice try.")
+		return true
+	}
+	return false
 }
