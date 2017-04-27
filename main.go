@@ -133,6 +133,9 @@ func messageUpdate(session *discordgo.Session, e *discordgo.MessageUpdate) {
 	message(session, e.Message)
 }
 func message(session *discordgo.Session, e *discordgo.Message) {
+	if e.Author == nil {
+		return
+	}
 	if e.Author.Bot {
 		return
 	}
