@@ -31,6 +31,8 @@ Get time of user:
 ` + "`@TimeyWimey timefor @user1 @user2 et.c`" + `
 Get time of user at specific time:
 ` + "`@TimeyWimey timeat <time> @users`" + `
+Get the timezone difference:
+` + "`@TimeyWimey timediff @users`" + `
 Examples:
 ` + "`@TimeyWimey timezone europe/stockholm`" + `
 Saved timezone "Europe/Stockholm" for LEGOlord208. Current time is 06:66 AM
@@ -335,6 +337,81 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			sendMessage(session, e.ChannelID, timeat+" your time is "+
 				currentTime+" for "+user.Username+".")
 		}
+	} else if cmd == "timediff" {
+		timeuser, ok := timezones[e.Author.ID]
+		if !ok {
+			sendMessage(session, e.ChannelID, "Your timezone isn't set.")
+			return
+		}
+
+		_, loc, err := parseTimeZone(timeuser.TimeZone)
+		if err != nil {
+			stdutil.PrintErr("Invalid map entry", err)
+			return
+		}
+
+		for _, user := range e.Mentions {
+			if nicetry(session, e.ChannelID, user) {
+				return
+			}
+
+			timeuser2, ok := timezones[user.ID]
+			if !ok {
+				sendMessage(session, e.ChannelID, user.Username+"'s "+
+					"timezone isn't set.")
+				return
+			}
+
+			_, loc2, err := parseTimeZone(timeuser2.TimeZone)
+			if err != nil {
+				stdutil.PrintErr("Invalid map entry", err)
+				return
+			}
+
+			// Wanna make sure we're pretty exact.
+			// update the time every time.
+			now := time.Now().In(loc)
+			now2 := time.Now().In(loc2)
+
+			hour := int(now2.Hour()) - int(now.Hour())
+			min := int(now2.Minute()) - int(now.Minute())
+			sec := int(now2.Second()) - int(now.Second())
+
+			hour2 := hour - 24
+			min2 := min - 24
+			sec2 := sec - 24
+
+			if abs(hour2) < abs(hour) {
+				hour = hour2
+			}
+			if abs(min2) < abs(min) {
+				min = min2
+			}
+			if abs(sec2) < abs(sec) {
+				sec = sec2
+			}
+
+			s := "Currently, the difference between you and " + user.Username + " is " +
+				strconv.Itoa(int(hour)) + " hour"
+
+			if hour != 1 {
+				s += "s"
+			}
+			if min > 0 {
+				s += " " + strconv.Itoa(min) + " minute"
+				if min != 1 {
+					s += "s"
+				}
+			}
+			if sec > 0 {
+				s += " " + strconv.Itoa(sec) + " minute"
+				if sec != 1 {
+					s += "s"
+				}
+			}
+
+			sendMessage(session, e.ChannelID, s)
+		}
 	} else if cmd == "help" {
 		dm, err := session.UserChannelCreate(e.Author.ID)
 		if err != nil {
@@ -441,4 +518,11 @@ func nicetry(session *discordgo.Session, channel string, user *discordgo.User) b
 		return true
 	}
 	return false
+}
+
+func abs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
 }
