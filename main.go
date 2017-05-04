@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"regexp"
@@ -79,14 +78,15 @@ func main() {
 
 	fmt.Println("Loading...")
 
-	data, err := ioutil.ReadFile("timeywimey.json")
+	file, err := os.Open("timeywimey.json")
 	if err != nil {
 		if !os.IsNotExist(err) {
 			stdutil.PrintErr("Couldn't read file", err)
 			return
 		}
 	} else {
-		err = json.Unmarshal(data, &timezones)
+		err = json.NewDecoder(file).Decode(&timezones)
+		file.Close()
 		if err != nil {
 			stdutil.PrintErr("Could not load JSON", err)
 			return
@@ -487,15 +487,16 @@ func parseTimeZone(timezone string) (bool, *time.Location, error) {
 }
 
 func saveTimeZones() error {
-	data, err := json.Marshal(timezones)
+	file, err := os.Create("timeywimey.json")
 	if err != nil {
-		stdutil.PrintErr("Could not make JSON", err)
+		stdutil.PrintErr("Couldn't save file", err)
 		return err
 	}
 
-	err = ioutil.WriteFile("timeywimey.json", data, 0666)
+	err = json.NewEncoder(file).Encode(timezones)
+	file.Close()
 	if err != nil {
-		stdutil.PrintErr("Couldn't save file", err)
+		stdutil.PrintErr("Could not make JSON", err)
 		return err
 	}
 	return nil
