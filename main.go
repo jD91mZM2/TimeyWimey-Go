@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -61,6 +62,11 @@ type user struct {
 var timezones = make(map[string]*user)
 var cache = make(map[string]*time.Location)
 
+var (
+	mutexTimezones sync.RWMutex
+	mutexCache     sync.RWMutex
+)
+
 var regexMentions = regexp.MustCompile("\\s*<@!?[0-9]+>\\s*")
 
 func main() {
@@ -85,7 +91,9 @@ func main() {
 			return
 		}
 	} else {
+		mutexTimezones.Lock()
 		err = json.NewDecoder(file).Decode(&timezones)
+		mutexTimezones.Unlock()
 		file.Close()
 		if err != nil {
 			stdutil.PrintErr("Could not load JSON", err)
@@ -135,10 +143,7 @@ func messageUpdate(session *discordgo.Session, e *discordgo.MessageUpdate) {
 	message(session, e.Message)
 }
 func message(session *discordgo.Session, e *discordgo.Message) {
-	if e.Author == nil {
-		return
-	}
-	if e.Author.Bot {
+	if e.Author == nil || e.Author.Bot {
 		return
 	}
 	msg := strings.ToLower(strings.TrimSpace(e.Content))
@@ -186,7 +191,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			var reply string
 			if len(e.Mentions) > 0 {
 				for _, user := range e.Mentions {
+					mutexTimezones.RLock()
 					timeuser, ok := timezones[user.ID]
+					mutexTimezones.RUnlock()
 					if ok {
 						reply = user.Username + "'s timezone is " +
 							timeuser.TimeZone + "."
@@ -225,7 +232,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			timezone = strings.ToUpper(timezone)
 		}
 
+		mutexTimezones.Lock()
 		timezones[e.Author.ID] = &user{TimeZone: timezone, Is24h: is24h}
+		mutexTimezones.Unlock()
 		err = saveTimeZones()
 		if err != nil {
 			return
@@ -242,7 +251,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			currentTime+".")
 		return
 	} else if cmd == "timefor" {
+		mutexTimezones.RLock()
 		timeuser, ok := timezones[e.Author.ID]
+		mutexTimezones.RUnlock()
 
 		format := format
 		if ok && timeuser.Is24h {
@@ -258,7 +269,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				return
 			}
 
+			mutexTimezones.RLock()
 			timeuser, ok := timezones[user.ID]
+			mutexTimezones.RUnlock()
 			var reply string
 
 			if ok {
@@ -280,7 +293,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			sendMessage(session, e.ChannelID, reply)
 		}
 	} else if cmd == "timeat" {
+		mutexTimezones.RLock()
 		timeuser, ok := timezones[e.Author.ID]
+		mutexTimezones.RUnlock()
 		if !ok {
 			sendMessage(session, e.ChannelID, "Your timezone isn't set.")
 			return
@@ -320,7 +335,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				return
 			}
 
+			mutexTimezones.RLock()
 			timeuser2, ok := timezones[user.ID]
+			mutexTimezones.RUnlock()
 			if !ok {
 				sendMessage(session, e.ChannelID, user.Username+"'s "+
 					"timezone isn't set.")
@@ -338,7 +355,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				currentTime+" for "+user.Username+".")
 		}
 	} else if cmd == "timediff" {
+		mutexTimezones.RLock()
 		timeuser, ok := timezones[e.Author.ID]
+		mutexTimezones.RUnlock()
 		if !ok {
 			sendMessage(session, e.ChannelID, "Your timezone isn't set.")
 			return
@@ -355,7 +374,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				return
 			}
 
+			mutexTimezones.RLock()
 			timeuser2, ok := timezones[user.ID]
+			mutexTimezones.RUnlock()
 			if !ok {
 				sendMessage(session, e.ChannelID, user.Username+"'s "+
 					"timezone isn't set.")
@@ -493,7 +514,9 @@ func saveTimeZones() error {
 		return err
 	}
 
+	mutexTimezones.RLock()
 	err = json.NewEncoder(file).Encode(timezones)
+	mutexTimezones.RUnlock()
 	file.Close()
 	if err != nil {
 		stdutil.PrintErr("Could not make JSON", err)
