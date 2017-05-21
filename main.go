@@ -167,6 +167,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 	msg = strings.TrimSpace(msg)
 
 	parts := strings.Fields(msg)
+	if len(parts) <= 0 {
+		return
+	}
 	cmd := parts[0]
 	args := parts[1:]
 
