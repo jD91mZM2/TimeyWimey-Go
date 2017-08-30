@@ -557,15 +557,15 @@ func createClockEmoji(t *time.Time) string {
 	cHour := t.Hour()
 	cMinutes := t.Minute()
 	clocktext := ":clock"
-    switch {
-        case cMinutes >= 45:
-            cMinutes = 0
-            cHour++
-        case cMinutes >= 20:
-            cMinutes = 30
-        default:
-            cMinutes = 0
-    }
+	switch {
+	case cMinutes >= 45:
+		cMinutes = 0
+		cHour++
+	case cMinutes >= 20:
+		cMinutes = 30
+	default:
+		cMinutes = 0
+	}
 	if cHour == 0 {
 		clocktext += "12"
 	} else {
