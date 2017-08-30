@@ -251,7 +251,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		currentTime := time.Now().In(loc).Format(format)
 		sendMessage(session, e.ChannelID, "Saved timezone \""+timezone+
 			"\" for "+e.Author.Username+". Current time is "+
-			currentTime+".")
+			currentTime+". "+createClockEmoji(loc))
 		return
 	} else if cmd == "timefor" {
 		mutexTimezones.RLock()
@@ -286,9 +286,8 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					return
 				}
 				currentTime := time.Now().In(loc).Format(format)
-
 				reply = "Current time for " + user.Username + " is " +
-					currentTime + "."
+					currentTime + ". " + createClockEmoji(loc)
 			} else {
 				reply = "No timezone set for " + user.Username + "."
 			}
@@ -355,7 +354,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 
 			currentTime := t.In(loc2).Format(format)
 			sendMessage(session, e.ChannelID, timeat+" your time is "+
-				currentTime+" for "+user.Username+".")
+				currentTime+" for "+user.Username+". "+createClockEmoji(loc2))
 		}
 	} else if cmd == "timediff" {
 		mutexTimezones.RLock()
@@ -552,4 +551,27 @@ func abs(i int) int {
 		return -i
 	}
 	return i
+}
+
+func createClockEmoji(loc *time.Location) string {
+	cHour := time.Now().In(loc).Hour()
+	cMinutes := time.Now().In(loc).Minute()
+	clocktext := ":clock"
+	if cMinutes >= 45 {
+		cMinutes = 0
+		cHour++
+	} else if cMinutes >= 20 {
+		cMinutes = 30
+	} else {
+		cMinutes = 0
+	}
+	if cHour == 0 {
+		clocktext += "12"
+	} else {
+		clocktext += strconv.Itoa(cHour % 12)
+	}
+	if cMinutes != 0 {
+		clocktext += strconv.Itoa(cMinutes)
+	}
+	return clocktext + ":"
 }
