@@ -248,10 +248,10 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
-		currentTime := time.Now().In(loc).Format(format)
+		currentTime := time.Now().In(loc)
 		sendMessage(session, e.ChannelID, "Saved timezone \""+timezone+
 			"\" for "+e.Author.Username+". Current time is "+
-			currentTime+".")
+			currentTime.Format(format)+". "+createClockEmoji(&currentTime))
 		return
 	} else if cmd == "timefor" {
 		mutexTimezones.RLock()
@@ -285,10 +285,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					stdutil.PrintErr("Invalid map entry", err)
 					return
 				}
-				currentTime := time.Now().In(loc).Format(format)
-
+				currentTime := time.Now().In(loc)
 				reply = "Current time for " + user.Username + " is " +
-					currentTime + "."
+					currentTime.Format(format) + ". " + createClockEmoji(&currentTime)
 			} else {
 				reply = "No timezone set for " + user.Username + "."
 			}
@@ -353,9 +352,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				return
 			}
 
-			currentTime := t.In(loc2).Format(format)
+			currentTime := t.In(loc2)
 			sendMessage(session, e.ChannelID, timeat+" your time is "+
-				currentTime+" for "+user.Username+".")
+				currentTime.Format(format)+" for "+user.Username+". "+createClockEmoji(&currentTime))
 		}
 	} else if cmd == "timediff" {
 		mutexTimezones.RLock()
@@ -552,4 +551,28 @@ func abs(i int) int {
 		return -i
 	}
 	return i
+}
+
+func createClockEmoji(t *time.Time) string {
+	cHour := t.Hour()
+	cMinutes := t.Minute()
+	clocktext := ":clock"
+	switch {
+	case cMinutes >= 45:
+		cMinutes = 0
+		cHour++
+	case cMinutes >= 20:
+		cMinutes = 30
+	default:
+		cMinutes = 0
+	}
+	if cHour == 0 {
+		clocktext += "12"
+	} else {
+		clocktext += strconv.Itoa(cHour % 12)
+	}
+	if cMinutes != 0 {
+		clocktext += strconv.Itoa(cMinutes)
+	}
+	return clocktext + ":"
 }
