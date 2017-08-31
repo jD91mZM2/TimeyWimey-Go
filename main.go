@@ -566,7 +566,7 @@ func createClockEmoji(t *time.Time) string {
 	default:
 		cMinutes = 0
 	}
-	if cHour == 0 {
+	if cHour == 0 || cHour == 12 {
 		clocktext += "12"
 	} else {
 		clocktext += strconv.Itoa(cHour % 12)
