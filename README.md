@@ -8,7 +8,7 @@ If you are just the general user, just invite it [here](https://discordapp.com/o
 TimeyWimey allows you to ask stuff like<br />
 `@TimeyWimey timefor @user`<br />
 and<br />
-`@TimeyWimey 8PM @user`
+`@TimeyWimey timeat 8PM @user`
 
 First you need to set your timezone<br />
 do that using **for example**<br />
