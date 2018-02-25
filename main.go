@@ -263,11 +263,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
-		mentions := e.Mentions
-		if len(e.Mentions) <= 0 {
-			mentions = []*discordgo.User{e.Author}
-		}
-		for _, user := range mentions {
+		for _, user := range mentions(session, e, args) {
 			if nicetry(session, e.ChannelID, user) {
 				return
 			}
@@ -286,7 +282,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					return
 				}
 				currentTime := time.Now().In(loc)
-				reply = "Current time for " + user.Username + " is " +
+				reply = "Time for " + user.Username + " (" + timezone + ")" + " is " +
 					currentTime.Format(format) + ". " + createClockEmoji(&currentTime)
 			} else {
 				reply = "No timezone set for " + user.Username + "."
@@ -315,6 +311,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		timeat := strings.ToUpper(args[0])
+		args = args[1:]
 		t, err := time.ParseInLocation("3PM", timeat, loc)
 		if err != nil {
 			t, err = time.ParseInLocation("15", timeat, loc)
@@ -332,7 +329,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
-		for _, user := range e.Mentions {
+		for _, user := range mentions(session, e, args) {
 			if nicetry(session, e.ChannelID, user) {
 				return
 			}
@@ -371,7 +368,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			return
 		}
 
-		for _, user := range e.Mentions {
+		for _, user := range mentions(session, e, args) {
 			if nicetry(session, e.ChannelID, user) {
 				return
 			}
@@ -494,7 +491,7 @@ func parseTimeZone(timezone string) (bool, *time.Location, error) {
 			value, err := strconv.ParseFloat(fixedNeg[1], 64)
 
 			if err == nil {
-				loc = time.FixedZone(zone, -int(value * 60 * 60))
+				loc = time.FixedZone(zone, -int(value*60*60))
 				return true, loc, nil
 			}
 		}
@@ -544,6 +541,48 @@ func nicetry(session *discordgo.Session, channel string, user *discordgo.User) b
 		return true
 	}
 	return false
+}
+func mentions(session *discordgo.Session, e *discordgo.Message, args []string) []*discordgo.User {
+	channel, err := session.State.Channel(e.ChannelID)
+	if err != nil {
+		stdutil.PrintErr("Failed to get channel", err)
+		return []*discordgo.User{}
+	}
+	guild, err := session.State.Guild(channel.GuildID)
+	if err != nil {
+		stdutil.PrintErr("Failed to get guild", err)
+		return []*discordgo.User{}
+	}
+	roles := []*discordgo.Role{}
+	for _, role := range guild.Roles {
+		for _, arg := range args {
+			if role.Name == arg {
+				roles = append(roles, role)
+			}
+		}
+	}
+	mentions := e.Mentions
+	for _, member := range guild.Members {
+		for _, arg := range args {
+			if strings.Contains(strings.ToLower(member.User.Username), strings.ToLower(arg)) {
+				mentions = append(mentions, member.User)
+			}
+		}
+		for _, role := range member.Roles {
+			for _, role2 := range roles {
+				if role == role2.ID {
+					// If the member has a mentioned role
+					mentions = append(mentions, member.User)
+				}
+			}
+		}
+	}
+
+	if len(mentions) == 0 {
+		mentions = []*discordgo.User{e.Author}
+	}
+
+	return mentions
 }
 
 func abs(i int) int {
