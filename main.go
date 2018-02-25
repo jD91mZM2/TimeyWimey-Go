@@ -483,18 +483,18 @@ func parseTimeZone(timezone string) (bool, *time.Location, error) {
 
 		if len(fixedPos) > 1 {
 			zone := fixedPos[0]
-			value, err := strconv.Atoi(fixedPos[1])
+			value, err := strconv.ParseFloat(fixedPos[1], 64)
 
 			if err == nil {
-				loc = time.FixedZone(zone, value*60*60)
+				loc = time.FixedZone(zone, int(value*60*60))
 				return true, loc, nil
 			}
 		} else if len(fixedNeg) > 1 {
 			zone := fixedNeg[0]
-			value, err := strconv.Atoi(fixedNeg[1])
+			value, err := strconv.ParseFloat(fixedNeg[1], 64)
 
 			if err == nil {
-				loc = time.FixedZone(zone, -(value * 60 * 60))
+				loc = time.FixedZone(zone, -int(value * 60 * 60))
 				return true, loc, nil
 			}
 		}
