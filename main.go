@@ -18,6 +18,7 @@ import (
 
 var botID string
 var avatarURL string
+var inviteURL string
 
 const format = "03:04 PM"
 const format24 = "15:04"
@@ -49,6 +50,9 @@ Hello! I'm TimeyWimey.
 I take care of the timezone trouble.
 
 Do ` + "`@TimeyWimey help`" + ` for some help.
+
+GitHub: https://github.com/jD91mZM2/TimeyWimey
+Support server: https://discord.gg/PJPrQXZ
 
 I'm written in Go. Using, well, discordgo.
 Ok, have fun! Bai bai!
@@ -116,6 +120,7 @@ func main() {
 	}
 	botID = user.ID
 	avatarURL = discordgo.EndpointUserAvatar(user.ID, user.Avatar)
+	inviteURL = "https://discordapp.com/oauth2/authorize?scope=bot&permissions=0&client_id=" + botID
 
 	session.AddHandler(messageCreate)
 	session.AddHandler(messageUpdate)
@@ -456,7 +461,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				Author: &discordgo.MessageEmbedAuthor{
 					Name:    "TimeyWimey",
 					IconURL: avatarURL,
-					URL:     discordgo.EndpointInvite(botID),
+					URL:     inviteURL,
 				},
 				Color: 0x82AD,
 				Footer: &discordgo.MessageEmbedFooter{
