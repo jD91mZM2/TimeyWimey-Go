@@ -264,8 +264,8 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		for _, user := range mentions(session, e, args) {
-			if nicetry(session, e.ChannelID, user) {
-				return
+			if user.Bot {
+				continue
 			}
 
 			mutexTimezones.RLock()
@@ -330,8 +330,8 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		for _, user := range mentions(session, e, args) {
-			if nicetry(session, e.ChannelID, user) {
-				return
+			if user.Bot {
+				continue
 			}
 
 			mutexTimezones.RLock()
@@ -369,8 +369,8 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		}
 
 		for _, user := range mentions(session, e, args) {
-			if nicetry(session, e.ChannelID, user) {
-				return
+			if user.Bot {
+				continue
 			}
 
 			mutexTimezones.RLock()
@@ -480,18 +480,18 @@ func parseTimeZone(timezone string) (bool, *time.Location, error) {
 
 		if len(fixedPos) > 1 {
 			zone := fixedPos[0]
-			value, err := strconv.ParseFloat(fixedPos[1], 64)
+			hour, minute, second, err := parseTime(fixedPos[1])
 
 			if err == nil {
-				loc = time.FixedZone(zone, int(value*60*60))
+				loc = time.FixedZone(zone, int(hour*60*60+minute*60+second))
 				return true, loc, nil
 			}
 		} else if len(fixedNeg) > 1 {
 			zone := fixedNeg[0]
-			value, err := strconv.ParseFloat(fixedNeg[1], 64)
+			hour, minute, second, err := parseTime(fixedNeg[1])
 
 			if err == nil {
-				loc = time.FixedZone(zone, -int(value*60*60))
+				loc = time.FixedZone(zone, -int(hour*60*60+minute*60+second))
 				return true, loc, nil
 			}
 		}
@@ -504,6 +504,25 @@ func parseTimeZone(timezone string) (bool, *time.Location, error) {
 		cache[timezone] = loc
 	}
 	return false, loc, nil
+}
+func parseTime(time string) (hour uint64, minute uint64, second uint64, err error) {
+	values := strings.Split(time, ":")
+	if len(values) > 0 {
+		hour, err = strconv.ParseUint(values[0], 10, 64)
+		if err != nil {
+			return
+		}
+	}
+	if len(values) > 1 {
+		minute, err = strconv.ParseUint(values[1], 10, 64)
+		if err != nil {
+			return
+		}
+	}
+	if len(values) > 2 {
+		second, err = strconv.ParseUint(values[2], 10, 64)
+	}
+	return
 }
 
 func saveTimeZones() error {
@@ -535,13 +554,6 @@ func isPermission(err error) bool {
 	return strings.Contains(err.Error(), "Missing Permission")
 }
 
-func nicetry(session *discordgo.Session, channel string, user *discordgo.User) bool {
-	if user.Bot {
-		sendMessage(session, channel, "Nice try.")
-		return true
-	}
-	return false
-}
 func mentions(session *discordgo.Session, e *discordgo.Message, args []string) []*discordgo.User {
 	channel, err := session.State.Channel(e.ChannelID)
 	if err != nil {
@@ -557,6 +569,11 @@ func mentions(session *discordgo.Session, e *discordgo.Message, args []string) [
 	for _, role := range guild.Roles {
 		for _, arg := range args {
 			if role.Name == arg {
+				roles = append(roles, role)
+			}
+		}
+		for _, id := range e.MentionRoles {
+			if role.ID == id {
 				roles = append(roles, role)
 			}
 		}
@@ -578,7 +595,7 @@ func mentions(session *discordgo.Session, e *discordgo.Message, args []string) [
 		}
 	}
 
-	if len(mentions) == 0 {
+	if len(mentions) == 0 && len(args) == 0 {
 		mentions = []*discordgo.User{e.Author}
 	}
 
