@@ -568,7 +568,7 @@ func mentions(session *discordgo.Session, e *discordgo.Message, args []string) [
 	roles := []*discordgo.Role{}
 	for _, role := range guild.Roles {
 		for _, arg := range args {
-			if role.Name == arg {
+			if strings.EqualFold(role.Name, arg) {
 				roles = append(roles, role)
 			}
 		}
@@ -581,7 +581,7 @@ func mentions(session *discordgo.Session, e *discordgo.Message, args []string) [
 	mentions := e.Mentions
 	for _, member := range guild.Members {
 		for _, arg := range args {
-			if strings.Contains(strings.ToLower(member.User.Username), strings.ToLower(arg)) {
+			if strings.Contains(strings.ToLower(member.User.Username), arg) {
 				mentions = append(mentions, member.User)
 			}
 		}
