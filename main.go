@@ -438,12 +438,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			sendMessage(session, e.ChannelID, s)
 		}
 	} else if cmd == "help" {
-		dm, err := session.UserChannelCreate(e.Author.ID)
-		if err != nil {
-			stdutil.PrintErr("Could not open DMs", err)
-			return
-		}
-		_, err = session.ChannelMessageSendEmbed(dm.ID,
+		_, err := session.ChannelMessageSendEmbed(e.ChannelID,
 			&discordgo.MessageEmbed{
 				Color:       0x82AD,
 				Title:       "TimeyWimey - Help!!!",
@@ -454,7 +449,6 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			stdutil.PrintErr("Could not send embed", nil)
 			return
 		}
-		sendMessage(session, e.ChannelID, "Delivered in DMs!")
 	} else if cmd == "about" {
 		_, err := session.ChannelMessageSendEmbed(e.ChannelID,
 			&discordgo.MessageEmbed{
