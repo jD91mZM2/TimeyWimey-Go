@@ -393,48 +393,36 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				return
 			}
 
-			// Wanna make sure we're pretty exact.
-			// update the time every time.
-			now := time.Now().In(loc)
-			now2 := time.Now().In(loc2)
+			now := time.Now().In(loc).Round(time.Second)
+			now2 := time.Now().In(loc2).Round(time.Second)
 
-			hour := int(now2.Hour()) - int(now.Hour())
-			min := int(now2.Minute()) - int(now.Minute())
-			sec := int(now2.Second()) - int(now.Second())
+			// Can't use time.Sub because it respects timezones and returns 0
+			year, month, day := now.Date()
+			hour, min, sec := now.Clock()
+			nsec := now.Nanosecond()
+			now = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
 
-			hour2 := hour - 24
-			min2 := min - 24
-			sec2 := sec - 24
+			year, month, day = now2.Date()
+			hour, min, sec = now2.Clock()
+			nsec = now2.Nanosecond()
+			now2 = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
+			// End of annoying and hacky code
 
-			if abs(hour2) < abs(hour) {
-				hour = hour2
-			}
-			if abs(min2) < abs(min) {
-				min = min2
-			}
-			if abs(sec2) < abs(sec) {
-				sec = sec2
-			}
-
-			s := "Currently, the difference between you and " + user.Username + " is " +
-				strconv.Itoa(int(hour)) + " hour"
-
-			if hour != 1 {
-				s += "s"
-			}
-			if min > 0 {
-				s += " " + strconv.Itoa(min) + " minute"
-				if min != 1 {
-					s += "s"
-				}
-			}
-			if sec > 0 {
-				s += " " + strconv.Itoa(sec) + " minute"
-				if sec != 1 {
-					s += "s"
-				}
+			var diff time.Duration
+			var ahead string
+			if now.Equal(now2) {
+				sendMessage(session, e.ChannelID, user.Username+" ("+timeuser2.TimeZone+") has the same time as you")
+				return
+			} else if now.After(now2) {
+				diff = now.Sub(now2)
+				ahead = "behind"
+			} else {
+				diff = now2.Sub(now)
+				ahead = "ahead"
 			}
 
+			s := fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
+				int64(diff.Hours()), int64(diff.Minutes()-diff.Hours()*60))
 			sendMessage(session, e.ChannelID, s)
 		}
 	} else if cmd == "help" {
