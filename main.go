@@ -440,7 +440,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 
 				if reply == "" {
 					reply = fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
-						int64(diff.Hours()), int64(diff.Minutes()-diff.Hours()*60))
+						int64(diff.Hours()), int64(diff.Minutes())-int64(diff.Hours())*60)
 				}
 			}
 			if len(buf)+len(reply)+1 > limit {
