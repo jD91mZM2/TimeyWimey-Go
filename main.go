@@ -348,24 +348,24 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				continue
 			}
 
+			var reply string
+
 			mutexTimezones.RLock()
 			timeuser2, ok := timezones[user.ID]
 			mutexTimezones.RUnlock()
 			if !ok {
-				sendMessage(session, e.ChannelID, user.Username+"'s "+
-					"timezone isn't set.")
-				return
-			}
+				reply = user.Username + "'s " + "timezone isn't set."
+			} else {
+				_, loc2, err := parseTimeZone(timeuser2.TimeZone)
+				if err != nil {
+					stdutil.PrintErr("Invalid map entry", err)
+					continue
+				}
 
-			_, loc2, err := parseTimeZone(timeuser2.TimeZone)
-			if err != nil {
-				stdutil.PrintErr("Invalid map entry", err)
-				continue
+				currentTime := t.In(loc2)
+				reply = timeat + " your time is " + currentTime.Format(format) + " for " + user.Username + ". " +
+					createClockEmoji(&currentTime)
 			}
-
-			currentTime := t.In(loc2)
-			reply := timeat + " your time is " + currentTime.Format(format) + " for " + user.Username + ". " +
-				createClockEmoji(&currentTime)
 
 			if len(buf)+len(reply)+1 > limit {
 				sendMessage(session, e.ChannelID, buf)
@@ -397,52 +397,52 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				continue
 			}
 
+			var reply string
+
 			mutexTimezones.RLock()
 			timeuser2, ok := timezones[user.ID]
 			mutexTimezones.RUnlock()
 			if !ok {
-				sendMessage(session, e.ChannelID, user.Username+"'s "+
-					"timezone isn't set.")
-				return
-			}
-
-			_, loc2, err := parseTimeZone(timeuser2.TimeZone)
-			if err != nil {
-				stdutil.PrintErr("Invalid map entry", err)
-				continue
-			}
-
-			now := time.Now().In(loc).Round(time.Second)
-			now2 := time.Now().In(loc2).Round(time.Second)
-
-			// Can't use time.Sub because it respects timezones and returns 0
-			year, month, day := now.Date()
-			hour, min, sec := now.Clock()
-			nsec := now.Nanosecond()
-			now = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
-
-			year, month, day = now2.Date()
-			hour, min, sec = now2.Clock()
-			nsec = now2.Nanosecond()
-			now2 = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
-			// End of annoying and hacky code
-
-			var diff time.Duration
-			var ahead string
-			if now.Equal(now2) {
-				sendMessage(session, e.ChannelID, user.Username+" ("+timeuser2.TimeZone+") has the same time as you")
-				return
-			} else if now.After(now2) {
-				diff = now.Sub(now2)
-				ahead = "behind"
+				reply = user.Username + "'s " + "timezone isn't set."
 			} else {
-				diff = now2.Sub(now)
-				ahead = "ahead"
+				_, loc2, err := parseTimeZone(timeuser2.TimeZone)
+				if err != nil {
+					stdutil.PrintErr("Invalid map entry", err)
+					continue
+				}
+
+				now := time.Now().In(loc).Round(time.Second)
+				now2 := time.Now().In(loc2).Round(time.Second)
+
+				// Can't use time.Sub because it respects timezones and returns 0
+				year, month, day := now.Date()
+				hour, min, sec := now.Clock()
+				nsec := now.Nanosecond()
+				now = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
+
+				year, month, day = now2.Date()
+				hour, min, sec = now2.Clock()
+				nsec = now2.Nanosecond()
+				now2 = time.Date(year, month, day, hour, min, sec, nsec, time.UTC)
+				// End of annoying and hacky code
+
+				var diff time.Duration
+				var ahead string
+				if now.Equal(now2) {
+					reply = user.Username + " (" + timeuser2.TimeZone + ") has the same time as you"
+				} else if now.After(now2) {
+					diff = now.Sub(now2)
+					ahead = "behind"
+				} else {
+					diff = now2.Sub(now)
+					ahead = "ahead"
+				}
+
+				if reply == "" {
+					reply = fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
+						int64(diff.Hours()), int64(diff.Minutes()-diff.Hours()*60))
+				}
 			}
-
-			reply := fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
-				int64(diff.Hours()), int64(diff.Minutes()-diff.Hours()*60))
-
 			if len(buf)+len(reply)+1 > limit {
 				sendMessage(session, e.ChannelID, buf)
 				buf = ""
