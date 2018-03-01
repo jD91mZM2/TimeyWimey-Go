@@ -22,6 +22,7 @@ var inviteURL string
 
 const format = "03:04 PM"
 const format24 = "15:04"
+const limit = 2000
 const help = `
 **Welcome to TimeyWimey!**
 This is the bot that manages your timezones... for you.
@@ -198,16 +199,15 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 		if len(args) < 1 {
 			var reply string
 			if len(e.Mentions) > 0 {
-				for _, user := range e.Mentions {
-					mutexTimezones.RLock()
-					timeuser, ok := timezones[user.ID]
-					mutexTimezones.RUnlock()
-					if ok {
-						reply = user.Username + "'s timezone is " +
-							timeuser.TimeZone + "."
-					} else {
-						reply = user.Username + "'s timezone is not set."
-					}
+				user := e.Mentions[0]
+				mutexTimezones.RLock()
+				timeuser, ok := timezones[user.ID]
+				mutexTimezones.RUnlock()
+				if ok {
+					reply = user.Username + "'s timezone is " +
+						timeuser.TimeZone + "."
+				} else {
+					reply = user.Username + "'s timezone is not set."
 				}
 			} else {
 				reply = "Usage: timezone <timezone>"
@@ -268,6 +268,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
+		var buf string
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
@@ -284,7 +285,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				_, loc, err := parseTimeZone(timezone)
 				if err != nil {
 					stdutil.PrintErr("Invalid map entry", err)
-					return
+					continue
 				}
 				currentTime := time.Now().In(loc)
 				reply = "Time for " + user.Username + " (" + timezone + ")" + " is " +
@@ -293,7 +294,14 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				reply = "No timezone set for " + user.Username + "."
 			}
 
-			sendMessage(session, e.ChannelID, reply)
+			if len(buf)+len(reply)+1 > limit {
+				sendMessage(session, e.ChannelID, buf)
+				buf = ""
+			}
+			buf += reply + "\n"
+		}
+		if buf != "" {
+			sendMessage(session, e.ChannelID, buf)
 		}
 	} else if cmd == "timeat" {
 		mutexTimezones.RLock()
@@ -334,6 +342,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
+		var buf string
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
@@ -351,12 +360,21 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			_, loc2, err := parseTimeZone(timeuser2.TimeZone)
 			if err != nil {
 				stdutil.PrintErr("Invalid map entry", err)
-				return
+				continue
 			}
 
 			currentTime := t.In(loc2)
-			sendMessage(session, e.ChannelID, timeat+" your time is "+
-				currentTime.Format(format)+" for "+user.Username+". "+createClockEmoji(&currentTime))
+			reply := timeat + " your time is " + currentTime.Format(format) + " for " + user.Username + ". " +
+				createClockEmoji(&currentTime)
+
+			if len(buf)+len(reply)+1 > limit {
+				sendMessage(session, e.ChannelID, buf)
+				buf = ""
+			}
+			buf += reply + "\n"
+		}
+		if buf != "" {
+			sendMessage(session, e.ChannelID, buf)
 		}
 	} else if cmd == "timediff" {
 		mutexTimezones.RLock()
@@ -373,6 +391,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			return
 		}
 
+		var buf string
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
@@ -390,7 +409,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			_, loc2, err := parseTimeZone(timeuser2.TimeZone)
 			if err != nil {
 				stdutil.PrintErr("Invalid map entry", err)
-				return
+				continue
 			}
 
 			now := time.Now().In(loc).Round(time.Second)
@@ -421,9 +440,17 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				ahead = "ahead"
 			}
 
-			s := fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
+			reply := fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
 				int64(diff.Hours()), int64(diff.Minutes()-diff.Hours()*60))
-			sendMessage(session, e.ChannelID, s)
+
+			if len(buf)+len(reply)+1 > limit {
+				sendMessage(session, e.ChannelID, buf)
+				buf = ""
+			}
+			buf += reply + "\n"
+		}
+		if buf != "" {
+			sendMessage(session, e.ChannelID, buf)
 		}
 	} else if cmd == "help" {
 		_, err := session.ChannelMessageSendEmbed(e.ChannelID,
