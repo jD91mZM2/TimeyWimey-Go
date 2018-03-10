@@ -268,7 +268,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
-		var buf string
+		success := []string{}
+		fail := []string{}
+
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
@@ -277,7 +279,6 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			mutexTimezones.RLock()
 			timeuser, ok := timezones[user.ID]
 			mutexTimezones.RUnlock()
-			var reply string
 
 			if ok {
 				timezone := timeuser.TimeZone
@@ -288,21 +289,14 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					continue
 				}
 				currentTime := time.Now().In(loc)
-				reply = "Time for " + user.Username + " (" + timezone + ")" + " is " +
-					currentTime.Format(format) + ". " + createClockEmoji(&currentTime)
+				success = append(success, "Time for "+user.Username+" ("+timezone+")"+" is "+
+					currentTime.Format(format)+". "+createClockEmoji(&currentTime))
 			} else {
-				reply = "No timezone set for " + user.Username + "."
+				fail = append(fail, "No timezone set for "+user.Username+".")
 			}
+		}
 
-			if len(buf)+len(reply)+1 > limit {
-				sendMessage(session, e.ChannelID, buf)
-				buf = ""
-			}
-			buf += reply + "\n"
-		}
-		if buf != "" {
-			sendMessage(session, e.ChannelID, buf)
-		}
+		printLines(session, e.ChannelID, append(success, fail...))
 	} else if cmd == "timeat" {
 		mutexTimezones.RLock()
 		timeuser, ok := timezones[e.Author.ID]
@@ -342,19 +336,19 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			format = format24
 		}
 
-		var buf string
+		success := []string{}
+		fail := []string{}
+
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
 			}
 
-			var reply string
-
 			mutexTimezones.RLock()
 			timeuser2, ok := timezones[user.ID]
 			mutexTimezones.RUnlock()
 			if !ok {
-				reply = user.Username + "'s " + "timezone isn't set."
+				fail = append(fail, user.Username+"'s "+"timezone isn't set.")
 			} else {
 				_, loc2, err := parseTimeZone(timeuser2.TimeZone)
 				if err != nil {
@@ -363,19 +357,11 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 				}
 
 				currentTime := t.In(loc2)
-				reply = timeat + " your time is " + currentTime.Format(format) + " for " + user.Username + ". " +
-					createClockEmoji(&currentTime)
+				success = append(success, timeat+" your time is "+currentTime.Format(format)+" for "+user.Username+
+					". "+createClockEmoji(&currentTime))
 			}
-
-			if len(buf)+len(reply)+1 > limit {
-				sendMessage(session, e.ChannelID, buf)
-				buf = ""
-			}
-			buf += reply + "\n"
 		}
-		if buf != "" {
-			sendMessage(session, e.ChannelID, buf)
-		}
+		printLines(session, e.ChannelID, append(success, fail...))
 	} else if cmd == "timediff" {
 		mutexTimezones.RLock()
 		timeuser, ok := timezones[e.Author.ID]
@@ -391,7 +377,9 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			return
 		}
 
-		var buf string
+		success := []string{}
+		fail := []string{}
+
 		for _, user := range mentions(session, e, args) {
 			if user.Bot {
 				continue
@@ -403,7 +391,7 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			timeuser2, ok := timezones[user.ID]
 			mutexTimezones.RUnlock()
 			if !ok {
-				reply = user.Username + "'s " + "timezone isn't set."
+				fail = append(fail, user.Username+"'s "+"timezone isn't set.")
 			} else {
 				_, loc2, err := parseTimeZone(timeuser2.TimeZone)
 				if err != nil {
@@ -442,16 +430,10 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 					reply = fmt.Sprintf("%s (%s) is %s with %02d:%02d", user.Username, timeuser2.TimeZone, ahead,
 						int64(diff.Hours()), int64(diff.Minutes())-int64(diff.Hours())*60)
 				}
+				success = append(success, reply)
 			}
-			if len(buf)+len(reply)+1 > limit {
-				sendMessage(session, e.ChannelID, buf)
-				buf = ""
-			}
-			buf += reply + "\n"
 		}
-		if buf != "" {
-			sendMessage(session, e.ChannelID, buf)
-		}
+		printLines(session, e.ChannelID, append(success, fail...))
 	} else if cmd == "help" {
 		_, err := session.ChannelMessageSendEmbed(e.ChannelID,
 			&discordgo.MessageEmbed{
@@ -483,6 +465,20 @@ func message(session *discordgo.Session, e *discordgo.Message) {
 			stdutil.PrintErr("Could not send embed", nil)
 			return
 		}
+	}
+}
+func printLines(session *discordgo.Session, channel string, lines []string) {
+	var buf string
+
+	for _, line := range lines {
+		if len(buf)+len(line)+1 > limit {
+			sendMessage(session, channel, buf)
+			buf = ""
+		}
+		buf += line + "\n"
+	}
+	if buf != "" {
+		sendMessage(session, channel, buf)
 	}
 }
 
